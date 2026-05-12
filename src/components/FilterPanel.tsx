@@ -1,6 +1,6 @@
 import type { FilterSelection } from '../types';
 import { TAG_GROUPS, DEFAULT_FILTER } from '../utils/constants';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Props {
   visible: boolean;
@@ -12,12 +12,12 @@ interface Props {
 export default function FilterPanel({ visible, filter, onChange, onClose }: Props) {
   const [local, setLocal] = useState<FilterSelection>(DEFAULT_FILTER);
 
-  // 打开时同步外部筛选值
-  if (visible && local !== filter) {
-    // 用 JSON 比较避免无限循环
-    const same = JSON.stringify(local) === JSON.stringify(filter);
-    if (!same) setLocal(JSON.parse(JSON.stringify(filter)));
-  }
+  // 仅在面板打开时同步外部筛选值一次
+  useEffect(() => {
+    if (visible) {
+      setLocal(JSON.parse(JSON.stringify(filter)));
+    }
+  }, [visible]);
 
   const toggle = (field: keyof FilterSelection, key: string) => {
     setLocal((prev) => {

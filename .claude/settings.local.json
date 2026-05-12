@@ -20,7 +20,10 @@
       "Bash(gh api *)",
       "Bash(git push *)",
       "Bash(curl *)",
-      "WebFetch(domain:tao-123-tz.github.io)"
+      "WebFetch(domain:tao-123-tz.github.io)",
+      "Bash(git remote *)",
+      "Bash(GIT_SSH_COMMAND=\"ssh -o ConnectTimeout=10\" git push origin master)",
+      "Bash(git subtree *)"
     ]
   }
 }
