@@ -18,8 +18,8 @@ export default function ManagePage() {
     try {
       const data = await getAllDishes();
       setDishes(data);
-    } catch {
-      showToast('加载失败');
+    } catch (e: any) {
+      showToast('加载失败: ' + (e?.message || ''));
     }
     setLoading(false);
   };

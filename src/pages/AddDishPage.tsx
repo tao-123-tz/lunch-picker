@@ -67,8 +67,9 @@ export default function AddDishPage() {
       }
       showToast(isEdit ? '已更新' : '已添加');
       setTimeout(() => navigate(-1), 800);
-    } catch {
-      showToast('保存失败，请重试');
+    } catch (e: any) {
+      const msg = e?.message || e?.error_description || JSON.stringify(e);
+      showToast('保存失败: ' + (msg.length > 40 ? msg.slice(0, 40) + '...' : msg));
     } finally {
       setSaving(false);
     }

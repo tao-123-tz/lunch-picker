@@ -25,9 +25,9 @@ export default function HomePage() {
     try {
       const dishes = await getAllDishes();
       setAllDishes(dishes);
-    } catch (err) {
+    } catch (err: any) {
       console.error('加载菜品失败', err);
-      showToast('加载失败，请检查网络');
+      showToast('加载失败: ' + (err?.message || '检查网络'));
     }
     setLoading(false);
   }, []);

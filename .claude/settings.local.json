@@ -19,7 +19,8 @@
       "Bash(npx gh-pages *)",
       "Bash(gh api *)",
       "Bash(git push *)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "WebFetch(domain:tao-123-tz.github.io)"
     ]
   }
 }

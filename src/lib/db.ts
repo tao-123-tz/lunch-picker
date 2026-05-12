@@ -1,59 +1,102 @@
+/**
+ * 统一数据层
+ * 优先 Supabase（云端多用户），3 秒超时后降级 IndexedDB（本地单机）
+ */
+
 import { supabase } from './supabase';
 import type { Dish, HistoryRecord, DishTags, FilterSelection } from '../types';
-import { PRESET_DISHES } from '../utils/constants';
+import {
+  localGetAllDishes,
+  localGetDishById,
+  localAddDish,
+  localUpdateDish,
+  localDeleteDish,
+  localGetAllHistory,
+  localAddHistory,
+  filterDishes,
+} from './storage';
 
-function getNickname(): string {
-  return localStorage.getItem('lunch_nickname') || '';
+// Supabase 请求超时时间
+const SUPABASE_TIMEOUT = 3000;
+
+let supabaseAvailable = true;
+
+/** 检查 Supabase 是否可用 */
+async function isSupabaseOnline(): Promise<boolean> {
+  if (!supabaseAvailable) return false;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT);
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/dishes?limit=0`,
+      {
+        headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
+        signal: controller.signal,
+      }
+    );
+    clearTimeout(timeout);
+    supabaseAvailable = res.ok;
+    return res.ok;
+  } catch {
+    supabaseAvailable = false;
+    console.warn('Supabase 不可用，降级为本地存储');
+    return false;
+  }
 }
 
 // ====== Dishes ======
 
 export async function getAllDishes(): Promise<Dish[]> {
-  const nickname = getNickname();
-  if (!nickname) return [];
+  const online = await isSupabaseOnline();
 
-  const { data, error } = await supabase
-    .from('dishes')
-    .select('*')
-    .eq('nickname', nickname)
-    .order('created_at', { ascending: false });
+  if (online) {
+    try {
+      const nickname = getNickname();
+      if (!nickname) return localGetAllDishes();
 
-  if (error) throw error;
+      const { data, error } = await supabase
+        .from('dishes')
+        .select('*')
+        .eq('nickname', nickname)
+        .order('created_at', { ascending: false });
 
-  // 首次使用：预置示例菜品
-  if (!data || data.length === 0) {
-    const preset: Dish[] = PRESET_DISHES.map((p, i) => ({
-      id: 0,
-      name: p.name,
-      imageDataUrl: '',
-      tags: p.tags,
-      createTime: Date.now() + i,
-      updateTime: Date.now() + i,
-    }));
+      if (error) throw error;
 
-    for (const p of preset) {
-      await addDish({
-        name: p.name,
-        imageDataUrl: '',
-        tags: p.tags,
-      });
+      if (!data || data.length === 0) {
+        // 首次使用：云端预置示例菜品，同时同步到本地
+        await supabase.from('dishes').insert(
+          PRESET_NAMES.map((name, i) => ({
+            nickname,
+            name,
+            tags: PRESET_TAGS[i],
+            image_url: '',
+          }))
+        );
+        return getAllDishes();
+      }
+
+      return (data as any[]).map(rowToDish);
+    } catch {
+      // Supabase 查询失败，降级
     }
-
-    return getAllDishes(); // 重新查询获取真实 ID
   }
 
-  return (data as any[]).map(rowToDish);
+  return localGetAllDishes();
 }
 
 export async function getDishById(id: number): Promise<Dish | null> {
-  const { data, error } = await supabase
-    .from('dishes')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error || !data) return null;
-  return rowToDish(data as any);
+  const online = await isSupabaseOnline();
+  if (online) {
+    try {
+      const { data, error } = await supabase
+        .from('dishes')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (!error && data) return rowToDish(data as any);
+    } catch {}
+  }
+  return localGetDishById(id);
 }
 
 export async function addDish(input: {
@@ -61,67 +104,98 @@ export async function addDish(input: {
   imageDataUrl: string;
   tags: DishTags;
 }): Promise<number> {
-  const nickname = getNickname();
-  const { data, error } = await supabase
-    .from('dishes')
-    .insert({
-      nickname,
-      name: input.name,
-      image_url: input.imageDataUrl,
-      tags: input.tags,
-    })
-    .select('id')
-    .single();
+  const online = await isSupabaseOnline();
+  if (online) {
+    try {
+      const nickname = getNickname();
+      if (!nickname) throw new Error('未登录');
 
-  if (error) throw error;
-  return (data as any).id;
+      const { data, error } = await supabase
+        .from('dishes')
+        .insert({
+          nickname,
+          name: input.name,
+          image_url: input.imageDataUrl,
+          tags: input.tags,
+        })
+        .select('id')
+        .single();
+
+      if (error) throw error;
+      return (data as any).id;
+    } catch (e: any) {
+      // 如果是网络错误，降级到本地
+      if (e?.code !== 'PGRST') throw e;
+    }
+  }
+  return localAddDish(input);
 }
 
 export async function updateDish(
   id: number,
   input: { name: string; imageDataUrl: string; tags: DishTags }
 ): Promise<void> {
-  const { error } = await supabase
-    .from('dishes')
-    .update({
-      name: input.name,
-      image_url: input.imageDataUrl,
-      tags: input.tags,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', id);
+  const online = await isSupabaseOnline();
+  if (online) {
+    try {
+      const { error } = await supabase
+        .from('dishes')
+        .update({
+          name: input.name,
+          image_url: input.imageDataUrl,
+          tags: input.tags,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
 
-  if (error) throw error;
+      if (error) throw error;
+      return;
+    } catch {}
+  }
+  return localUpdateDish(id, input);
 }
 
 export async function deleteDish(id: number): Promise<void> {
-  const { error } = await supabase.from('dishes').delete().eq('id', id);
-  if (error) throw error;
+  const online = await isSupabaseOnline();
+  if (online) {
+    try {
+      const { error } = await supabase.from('dishes').delete().eq('id', id);
+      if (error) throw error;
+      return;
+    } catch {}
+  }
+  return localDeleteDish(id);
 }
 
 // ====== History ======
 
 export async function getAllHistory(): Promise<HistoryRecord[]> {
-  const nickname = getNickname();
-  if (!nickname) return [];
+  const online = await isSupabaseOnline();
+  if (online) {
+    try {
+      const nickname = getNickname();
+      if (!nickname) return [];
 
-  const { data, error } = await supabase
-    .from('history')
-    .select('*')
-    .eq('nickname', nickname)
-    .order('created_at', { ascending: false })
-    .limit(100);
+      const { data, error } = await supabase
+        .from('history')
+        .select('*')
+        .eq('nickname', nickname)
+        .order('created_at', { ascending: false })
+        .limit(100);
 
-  if (error) throw error;
+      if (error) throw error;
 
-  return (data || []).map((r: any) => ({
-    id: String(r.id),
-    dishId: String(r.dish_id),
-    dishName: r.dish_name,
-    dishImage: r.dish_image,
-    tags: r.tags as DishTags,
-    resultTime: new Date(r.created_at).getTime(),
-  }));
+      return (data || []).map((r: any) => ({
+        id: String(r.id),
+        dishId: String(r.dish_id),
+        dishName: r.dish_name,
+        dishImage: r.dish_image,
+        tags: r.tags as DishTags,
+        resultTime: new Date(r.created_at).getTime(),
+      }));
+    } catch {}
+  }
+  return localGetAllHistory();
 }
 
 export async function addHistory(record: {
@@ -130,19 +204,31 @@ export async function addHistory(record: {
   dishImage: string;
   tags: DishTags;
 }): Promise<void> {
-  const nickname = getNickname();
-  const { error } = await supabase.from('history').insert({
-    nickname,
-    dish_id: record.dishId,
-    dish_name: record.dishName,
-    dish_image: record.dishImage,
-    tags: record.tags,
-  });
+  const online = await isSupabaseOnline();
+  if (online) {
+    try {
+      const nickname = getNickname();
+      if (!nickname) return;
 
-  if (error) throw error;
+      const { error } = await supabase.from('history').insert({
+        nickname,
+        dish_id: record.dishId,
+        dish_name: record.dishName,
+        dish_image: record.dishImage,
+        tags: record.tags,
+      });
+      if (error) throw error;
+      return;
+    } catch {}
+  }
+  return localAddHistory(record);
 }
 
 // ====== Helpers ======
+
+function getNickname(): string {
+  return localStorage.getItem('lunch_nickname') || '';
+}
 
 function rowToDish(row: any): Dish {
   return {
@@ -155,25 +241,20 @@ function rowToDish(row: any): Dish {
   };
 }
 
-// ====== Filters ======
+const PRESET_NAMES = [
+  '黄焖鸡米饭', '麻辣烫', '番茄鸡蛋面', '宫保鸡丁盖饭',
+  '兰州拉面', '寿司拼盘', '汉堡套餐', '酸辣粉',
+];
 
-export function filterDishes(
-  dishes: Dish[],
-  filter: FilterSelection
-): Dish[] {
-  const hasActive =
-    filter.taste.length > 0 ||
-    filter.type.length > 0 ||
-    filter.cuisine.length > 0;
-  if (!hasActive) return dishes;
+const PRESET_TAGS: DishTags[] = [
+  { taste: 'spicy', type: 'rice', cuisine: 'chinese' },
+  { taste: 'spicy', type: 'snack', cuisine: 'chinese' },
+  { taste: 'not_spicy', type: 'noodle', cuisine: 'chinese' },
+  { taste: 'mild_spicy', type: 'rice', cuisine: 'chinese' },
+  { taste: 'not_spicy', type: 'noodle', cuisine: 'chinese' },
+  { taste: 'not_spicy', type: 'other', cuisine: 'japanese' },
+  { taste: 'not_spicy', type: 'fast_food', cuisine: 'western' },
+  { taste: 'spicy', type: 'vermicelli', cuisine: 'chinese' },
+];
 
-  return dishes.filter((d) => {
-    if (filter.taste.length && !filter.taste.includes(d.tags.taste))
-      return false;
-    if (filter.type.length && !filter.type.includes(d.tags.type))
-      return false;
-    if (filter.cuisine.length && !filter.cuisine.includes(d.tags.cuisine))
-      return false;
-    return true;
-  });
-}
+export { filterDishes };
