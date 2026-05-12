@@ -18,7 +18,8 @@
       "Bash(gh repo *)",
       "Bash(npx gh-pages *)",
       "Bash(gh api *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(curl *)"
     ]
   }
 }
