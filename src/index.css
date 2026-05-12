@@ -1,0 +1,221 @@
+/* 中国风主题色彩系统 */
+:root {
+  --color-primary: #C41E1A;
+  --color-primary-dark: #A01814;
+  --color-accent: #D4A853;
+  --color-bg: #F5F0E8;
+  --color-bg-dark: #EBE4D5;
+  --color-text: #2C2C2C;
+  --color-text-light: #8B7355;
+  --color-card: #FFFFFF;
+  --color-border: #E8D5B7;
+  --color-success: #6B8E4E;
+  --color-danger: #C41E1A;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --shadow-pop: 0 8px 40px rgba(0, 0, 0, 0.15);
+  --font-title: 18px;
+  --font-body: 15px;
+  --font-small: 13px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--font-body);
+  line-height: 1.6;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 按钮基础样式 */
+button {
+  border: none;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: #FFFFFF;
+  border-radius: var(--radius-md);
+  font-size: var(--font-body);
+  padding: 12px 32px;
+  text-align: center;
+  transition: background-color 0.2s;
+}
+.btn-primary:hover {
+  background-color: var(--color-primary-dark);
+}
+.btn-primary:disabled {
+  background-color: #CCC;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.btn-success {
+  background-color: var(--color-success);
+  color: #FFFFFF;
+  border-radius: var(--radius-md);
+  font-size: var(--font-body);
+  padding: 12px 32px;
+  text-align: center;
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-body);
+  padding: 10px 30px;
+  text-align: center;
+}
+
+/* 标签样式 */
+.tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-small);
+  color: var(--color-text-light);
+  background-color: var(--color-bg-dark);
+  margin-right: 6px;
+  margin-bottom: 6px;
+}
+.tag--active {
+  background-color: var(--color-primary);
+  color: #FFFFFF;
+}
+
+/* 卡片样式 */
+.card {
+  background-color: var(--color-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+/* 加载/空状态 */
+.loading-hint,
+.empty-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 32px;
+  text-align: center;
+  color: var(--color-text-light);
+}
+
+.empty-icon {
+  font-size: 80px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+/* 页面通用容器 */
+.page {
+  min-height: 100%;
+  padding: 16px;
+  padding-bottom: 32px;
+}
+
+/* 顶部导航栏 */
+.nav-bar {
+  display: flex;
+  align-items: center;
+  background-color: var(--color-primary);
+  color: #FFFFFF;
+  padding: 12px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  min-height: 48px;
+}
+
+.nav-back {
+  color: #FFFFFF;
+  background: none;
+  font-size: 24px;
+  padding: 4px 12px 4px 0;
+  margin-right: 8px;
+}
+
+.nav-title {
+  font-size: var(--font-title);
+  font-weight: 600;
+  flex: 1;
+}
+
+/* ====== 动画关键帧 ====== */
+
+/* 签筒摇晃 */
+@keyframes barrelShake {
+  0%, 100% { transform: rotate(0deg); }
+  15% { transform: rotate(-18deg); }
+  30% { transform: rotate(16deg); }
+  45% { transform: rotate(-14deg); }
+  60% { transform: rotate(10deg); }
+  75% { transform: rotate(-6deg); }
+  90% { transform: rotate(3deg); }
+}
+
+.barrel-shaking {
+  animation: barrelShake 0.8s ease-in-out 2;
+  transform-origin: bottom center;
+}
+
+/* 结果弹出 */
+@keyframes resultPop {
+  0% { opacity: 0; transform: scale(0); }
+  70% { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* 脉冲提示 */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Toast 淡入 */
+@keyframes toastIn {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* 遮罩淡入 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 面板上滑 */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
