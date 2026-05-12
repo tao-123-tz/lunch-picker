@@ -10,7 +10,8 @@ export default function AddDishPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id;
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const albumRef = useRef<HTMLInputElement>(null);
 
   const [imageUrl, setImageUrl] = useState('');
   const [name, setName] = useState('');
@@ -21,7 +22,6 @@ export default function AddDishPage() {
   });
   const [saving, setSaving] = useState(false);
 
-  // 加载编辑数据
   useEffect(() => {
     if (!id) return;
     getDishById(Number(id)).then((dish) => {
@@ -33,7 +33,8 @@ export default function AddDishPage() {
     });
   }, [id]);
 
-  const handleChooseImage = () => fileInputRef.current?.click();
+  const handleCamera = () => cameraRef.current?.click();
+  const handleAlbum = () => albumRef.current?.click();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -53,17 +54,9 @@ export default function AddDishPage() {
     setSaving(true);
     try {
       if (isEdit) {
-        await updateDish(Number(id), {
-          name: name.trim(),
-          imageDataUrl: imageUrl,
-          tags,
-        });
+        await updateDish(Number(id), { name: name.trim(), imageDataUrl: imageUrl, tags });
       } else {
-        await addDish({
-          name: name.trim(),
-          imageDataUrl: imageUrl,
-          tags,
-        });
+        await addDish({ name: name.trim(), imageDataUrl: imageUrl, tags });
       }
       showToast(isEdit ? '已更新' : '已添加');
       setTimeout(() => navigate(-1), 800);
@@ -84,43 +77,55 @@ export default function AddDishPage() {
         <span className="nav-title">{isEdit ? '编辑菜品' : '添加菜品'}</span>
       </div>
 
+      {/* 图片预览 */}
       <div
-        onClick={handleChooseImage}
+        onClick={handleAlbum}
         style={{
-          width: '100%', aspectRatio: '1', borderRadius: 'var(--radius-md)',
-          overflow: 'hidden', backgroundColor: 'var(--color-bg-dark)',
-          marginBottom: 24, cursor: 'pointer',
+          width: '100%', aspectRatio: '1', borderRadius: 16,
+          overflow: 'hidden', backgroundColor: '#EBE4D5',
+          marginBottom: 16, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
         {imageUrl ? (
           <img src={imageUrl} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
-          <div style={{ textAlign: 'center', color: 'var(--color-text-light)' }}>
+          <div style={{ textAlign: 'center', color: '#8B7355' }}>
             <div style={{ fontSize: 48 }}>📷</div>
-            <div>点击上传菜品图片</div>
+            <div>点击添加菜品图片</div>
           </div>
         )}
-        <input ref={fileInputRef} type="file" accept="image/*" capture="environment"
+      </div>
+
+      {/* 两个上传入口 */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+        <button onClick={handleCamera} style={btnStyle}>
+          📸 拍照
+        </button>
+        <button onClick={handleAlbum} style={btnStyle}>
+          🖼️ 从相册选择
+        </button>
+        <input ref={cameraRef} type="file" accept="image/*" capture="environment"
+          style={{ display: 'none' }} onChange={handleFileChange} />
+        <input ref={albumRef} type="file" accept="image/*"
           style={{ display: 'none' }} onChange={handleFileChange} />
       </div>
 
+      {/* 菜名 */}
       <div style={{ marginBottom: 24 }}>
         <label style={{ display: 'block', fontWeight: 600, marginBottom: 12 }}>菜名</label>
         <input
-          type="text"
-          placeholder="请输入菜名（最多20字）"
-          maxLength={20}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          type="text" placeholder="请输入菜名（最多20字）" maxLength={20}
+          value={name} onChange={(e) => setName(e.target.value)}
           style={{
-            width: '100%', height: 48, padding: '0 16px', borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--color-border)', fontSize: 'var(--font-body)',
-            outline: 'none', backgroundColor: 'var(--color-card)',
+            width: '100%', height: 48, padding: '0 16px', borderRadius: 12,
+            border: '1px solid #E8D5B7', fontSize: 15, outline: 'none',
+            backgroundColor: '#FFF',
           }}
         />
       </div>
 
+      {/* 标签 */}
       {TAG_GROUPS.map((group) => (
         <div key={group.name} style={{ marginBottom: 24 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 12 }}>{group.name}</label>
@@ -128,31 +133,35 @@ export default function AddDishPage() {
             {group.options.map((opt) => {
               const active = tags[group.field] === opt.key;
               return (
-                <span
-                  key={opt.key}
+                <span key={opt.key}
                   className={`tag ${active ? 'tag--active' : ''}`}
                   onClick={() => setTags({ ...tags, [group.field]: opt.key })}
-                  style={{ padding: '10px 18px', fontSize: 'var(--font-body)', cursor: 'pointer' }}
-                >
-                  {opt.icon} {opt.label}
-                </span>
+                  style={{ padding: '10px 18px', fontSize: 15, cursor: 'pointer' }}
+                >{opt.icon} {opt.label}</span>
               );
             })}
           </div>
         </div>
       ))}
 
+      {/* 保存 */}
       <div style={{ paddingBottom: 32 }}>
-        <button
-          className="btn-primary"
-          disabled={!canSubmit || saving}
-          onClick={handleSave}
-          style={{ width: '100%', height: 48, fontSize: 'var(--font-title)' }}
+        <button className="btn-primary"
+          disabled={!canSubmit || saving} onClick={handleSave}
+          style={{ width: '100%', height: 48, fontSize: 17 }}
         >
           {saving ? '保存中...' : isEdit ? '保存修改' : '添加菜品'}
         </button>
       </div>
+
       <Toast />
     </div>
   );
 }
+
+const btnStyle: React.CSSProperties = {
+  flex: 1, height: 44, borderRadius: 12,
+  border: '1px solid #E8D5B7', backgroundColor: '#FFF',
+  fontSize: 15, display: 'flex', alignItems: 'center',
+  justifyContent: 'center', gap: 6, cursor: 'pointer',
+};
