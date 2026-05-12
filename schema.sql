@@ -28,35 +28,10 @@ CREATE INDEX IF NOT EXISTS idx_dishes_nickname ON dishes(nickname);
 CREATE INDEX IF NOT EXISTS idx_history_nickname ON history(nickname);
 CREATE INDEX IF NOT EXISTS idx_history_created_at ON history(created_at DESC);
 
--- 4. 行级安全 (RLS): 用户只能读写自己的数据
+-- 4. RLS: 允许所有 anon 操作（应用层通过 nickname 字段做过滤）
 ALTER TABLE dishes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE history ENABLE ROW LEVEL SECURITY;
 
--- dishes 策略
-CREATE POLICY "dishes_select" ON dishes FOR SELECT
-  USING (nickname = current_setting('request.jwt.claims', true)::json->>'nickname');
-
-CREATE POLICY "dishes_insert" ON dishes FOR INSERT
-  WITH CHECK (nickname = current_setting('request.jwt.claims', true)::json->>'nickname');
-
-CREATE POLICY "dishes_update" ON dishes FOR UPDATE
-  USING (nickname = current_setting('request.jwt.claims', true)::json->>'nickname');
-
-CREATE POLICY "dishes_delete" ON dishes FOR DELETE
-  USING (nickname = current_setting('request.jwt.claims', true)::json->>'nickname');
-
--- history 策略
-CREATE POLICY "history_select" ON history FOR SELECT
-  USING (nickname = current_setting('request.jwt.claims', true)::json->>'nickname');
-
-CREATE POLICY "history_insert" ON history FOR INSERT
-  WITH CHECK (nickname = current_setting('request.jwt.claims', true)::json->>'nickname');
-
--- 5. 存储桶 (在 Supabase Storage 界面手动创建，命名为 dish-images)
--- 或者在 SQL Editor 执行:
--- INSERT INTO storage.buckets (id, name, public) VALUES ('dish-images', 'dish-images', true);
-
--- 存储桶 RLS
--- CREATE POLICY "images_select" ON storage.objects FOR SELECT USING (bucket_id = 'dish-images');
--- CREATE POLICY "images_insert" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'dish-images');
--- CREATE POLICY "images_delete" ON storage.objects FOR DELETE USING (bucket_id = 'dish-images');
+-- 使用 anon key 时，允许所有操作（应用代码负责过滤）
+CREATE POLICY "dishes_all" ON dishes FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "history_all" ON history FOR ALL TO anon USING (true) WITH CHECK (true);

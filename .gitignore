@@ -8,3 +8,5 @@ dist/
 # IDE
 .idea/
 *.un~
+
+.vercel
